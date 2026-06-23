@@ -16,30 +16,31 @@ class StationWidget(QWidget):
         # 存储设备点击区域
         self.click_regions = {} # id -> (rect, type)
         
-        # 基础坐标定义 (重构为百分比或更合理的固定值以适应全屏)
-        self.center_y = 400
-        self.y_3g = self.center_y - 100
+        # 基础坐标定义 - 调大并准备居中
+        self.base_x_offset = 100
+        self.center_y = 450 # 稍微下移，为顶部按钮留出更多空间
+        self.y_3g = self.center_y - 120
         self.y_iig = self.center_y
-        self.y_1g = self.center_y + 100
-        self.y_safety = self.center_y + 150
+        self.y_1g = self.center_y + 120
+        self.y_safety = self.center_y + 180
         
-        self.x_start = 50
-        self.x_x_signal = 150
-        self.x_d1 = 220
-        self.x_sw1 = 300
+        self.x_start = self.base_x_offset
+        self.x_x_signal = self.base_x_offset + 150
+        self.x_d1 = self.base_x_offset + 250
+        self.x_sw1 = self.base_x_offset + 350
         
-        # 斜线分岔点
-        self.x_sw3_entry = 400
-        self.x_sw5_entry = 400
+        # 斜线分岔点 - 间距加大
+        self.x_sw3_entry = self.base_x_offset + 500
+        self.x_sw5_entry = self.base_x_offset + 500
         
-        self.x_track_start = 450
-        self.x_track_end = 850
+        self.x_track_start = self.base_x_offset + 550
+        self.x_track_end = self.base_x_offset + 1050
         
-        self.x_sw4 = 950
-        self.x_sw2 = 950
+        self.x_sw4 = self.base_x_offset + 1150
+        self.x_sw2 = self.base_x_offset + 1150
         
-        self.x_s_signal = 1100
-        self.x_end = 1250
+        self.x_s_signal = self.base_x_offset + 1300
+        self.x_end = self.base_x_offset + 1500
 
     def update_ui(self, device_id, state):
         self.update()
@@ -52,6 +53,31 @@ class StationWidget(QWidget):
                 return
 
     def paintEvent(self, event):
+        # 动态计算居中偏移量
+        total_station_width = 1500 # 根据 x_end 的大致范围
+        self.base_x_offset = max(50, (self.width() - total_station_width) // 2)
+        
+        # 站场图下移至屏幕垂直正中心 (考虑顶部工具栏高度后)
+        self.center_y = self.height() // 2 + 50 # 50 是为了平衡视觉重心
+        self.y_3g = self.center_y - 120
+        self.y_iig = self.center_y
+        self.y_1g = self.center_y + 120
+        self.y_safety = self.center_y + 180
+        
+        # 更新所有依赖 base_x_offset 的坐标 (确保为整数)
+        self.x_start = int(self.base_x_offset)
+        self.x_x_signal = self.x_start + 150
+        self.x_d1 = self.x_start + 250
+        self.x_sw1 = self.x_start + 350
+        self.x_sw3_entry = self.x_start + 500
+        self.x_sw5_entry = self.x_start + 500
+        self.x_track_start = self.x_start + 550
+        self.x_track_end = self.x_start + 1050
+        self.x_sw4 = self.x_start + 1150
+        self.x_sw2 = self.x_start + 1150
+        self.x_s_signal = self.x_start + 1300
+        self.x_end = self.x_start + 1500
+
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.fillRect(self.rect(), QColor(0, 0, 0))  # 纯黑背景，符合专业UI
@@ -202,10 +228,10 @@ class StationWidget(QWidget):
         painter.setPen(Qt.white)
         painter.setFont(QFont("Microsoft YaHei", 10, QFont.Bold))
         
-        # 站名
-        painter.setFont(QFont("Microsoft YaHei", 24, QFont.Bold))
+        # 站名 - 适当下移
+        painter.setFont(QFont("Microsoft YaHei", 32, QFont.Bold))
         painter.setPen(QColor(0, 255, 0))
-        painter.drawText(self.rect(), Qt.AlignTop | Qt.AlignHCenter, "\n标 准 站")
+        painter.drawText(self.rect(), Qt.AlignTop | Qt.AlignHCenter, "\n\n标 准 站")
         
         painter.setFont(QFont("Microsoft YaHei", 10))
         painter.setPen(Qt.white)
@@ -219,8 +245,3 @@ class StationWidget(QWidget):
         painter.setPen(Qt.yellow)
         painter.drawText(self.x_start, self.y_iig - 40, "← 下行方向")
         painter.drawText(self.x_end - 100, self.y_iig + 60, "上行方向 →")
-
-        # 版权/提示
-        painter.setFont(QFont("Microsoft YaHei", 32, QFont.Bold))
-        painter.setPen(QColor(0, 255, 0, 100)) # 半透明绿色
-        painter.drawText(self.rect(), Qt.AlignBottom | Qt.AlignHCenter, "试用版 (非商用)\n")
