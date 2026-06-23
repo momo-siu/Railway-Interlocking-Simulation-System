@@ -1,11 +1,13 @@
 from PyQt5.QtCore import QObject, QTimer
 from utils.state_manager import StateManager
 from utils.models import SwitchPosition, SignalColor
+from utils.sound_manager import SoundManager
 
 class DeviceSimulator(QObject):
     def __init__(self):
         super().__init__()
         self.state_manager = StateManager()
+        self.sound_manager = SoundManager()
         
     def move_switch(self, swid: str, target_pos: SwitchPosition):
         """模拟道岔转动，带延时"""
@@ -15,6 +17,7 @@ class DeviceSimulator(QObject):
 
         self.state_manager.log(f"道岔 {swid}# 开始向 {target_pos.value} 转换...")
         self.state_manager.update_switch(swid, position=SwitchPosition.MOVING)
+        self.sound_manager.play_switch_move()
         
         # 模拟 2秒转动时间
         QTimer.singleShot(2000, lambda: self._finish_move_switch(swid, target_pos))
