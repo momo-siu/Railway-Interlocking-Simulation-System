@@ -13,6 +13,20 @@ conda activate rail
 python main.py
 ```
 
+## 打包与部署
+
+```bash
+# 安装打包工具
+pip install pyinstaller
+
+# 执行打包命令
+# --onefile: 封装为单个exe
+# --windowed: 运行时不显示控制台
+# --add-data: 包含音频资源文件 (Windows下使用分号 ;)
+pyinstaller --noconfirm --onefile --windowed --add-data "assets;assets" --name "RailwayInterlocking" main.py
+```
+即可在 dist/ 文件夹下获得 RailwayInterlocking.exe 。
+
 ## 站场布局
 本站为标准中间站，包含以下设备：
 - **股道区段**: 3条到发线 (IIG正线, 1G, 3G) + 1条安全线 + 进站内方/接近区段 (JXG, IIAG, IIBG, JSG)。

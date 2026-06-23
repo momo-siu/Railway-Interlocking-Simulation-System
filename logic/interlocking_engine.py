@@ -10,9 +10,9 @@ class InterlockingEngine(QObject):
         self.simulator = simulator
         self.active_routes = {}  # start_node -> route_model
         
-        # 预定义进路表
+        # 预定义进路表 (根据重构后的站场拓扑)
         self.route_table = {
-            # 下行接车进路
+            # 下行进站
             ("X", "XII"): {
                 "tracks": ["IIAG", "IIG"],
                 "switches": {"1": SwitchPosition.NORMAL, "4": SwitchPosition.NORMAL},
@@ -20,40 +20,45 @@ class InterlockingEngine(QObject):
             },
             ("X", "X3"): {
                 "tracks": ["IIAG", "3G"],
-                "switches": {"1": SwitchPosition.REVERSE, "3": SwitchPosition.REVERSE},
+                "switches": {"1": SwitchPosition.REVERSE, "3": SwitchPosition.NORMAL, "4": SwitchPosition.REVERSE},
                 "type": "TRAIN"
             },
             ("X", "X1"): {
                 "tracks": ["IIAG", "1G"],
-                "switches": {"1": SwitchPosition.REVERSE, "5": SwitchPosition.REVERSE},
+                "switches": {"1": SwitchPosition.REVERSE, "5": SwitchPosition.NORMAL},
                 "type": "TRAIN"
             },
-            # 下行发车进路
+            # 下行发车
             ("XII", "JSG"): {
-                "tracks": ["IIBG"],
+                "tracks": ["IIBG", "JSG"],
                 "switches": {"4": SwitchPosition.NORMAL},
                 "type": "TRAIN"
             },
             ("X3", "JSG"): {
-                "tracks": ["IIBG"],
+                "tracks": ["IIBG", "JSG"],
                 "switches": {"4": SwitchPosition.REVERSE},
                 "type": "TRAIN"
             },
-            ("X1", "JSG"): {
-                "tracks": ["IIBG"],
-                "switches": {"2": SwitchPosition.REVERSE},
-                "type": "TRAIN"
-            },
-            # 上行接车进路
+            # 上行进站
             ("S", "SII"): {
                 "tracks": ["IIBG", "IIG"],
                 "switches": {"4": SwitchPosition.NORMAL, "1": SwitchPosition.NORMAL},
                 "type": "TRAIN"
             },
-            # 调车进路示例
-            ("D1", "3G"): {
-                "tracks": ["3G"],
-                "switches": {"1": SwitchPosition.REVERSE, "3": SwitchPosition.REVERSE},
+            ("S", "S3"): {
+                "tracks": ["IIBG", "3G"],
+                "switches": {"4": SwitchPosition.REVERSE, "3": SwitchPosition.NORMAL},
+                "type": "TRAIN"
+            },
+            ("S", "S1"): {
+                "tracks": ["IIBG", "1G"],
+                "switches": {"2": SwitchPosition.REVERSE, "5": SwitchPosition.NORMAL},
+                "type": "TRAIN"
+            },
+            # 调车
+            ("D1", "IIG"): {
+                "tracks": ["IIG"],
+                "switches": {"1": SwitchPosition.NORMAL},
                 "type": "SHUNTING"
             }
         }

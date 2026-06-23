@@ -5,9 +5,11 @@ __pycache__/
 *.so
 .Python
 env/
+# PyInstaller
 build/
 develop-eggs/
 dist/
+*.spec
 downloads/
 eggs/
 .eggs/
