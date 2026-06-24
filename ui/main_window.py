@@ -139,12 +139,13 @@ class MainWindow(QMainWindow):
             btn_dn.setStyleSheet(btn_style)
             btn_rev.setStyleSheet(btn_style)
             sw_id = str(i)
-            btn_dn.clicked.connect(lambda checked, s=sw_id: self.engine.switch_single_operate(s, SwitchPosition.NORMAL))
-            btn_rev.clicked.connect(lambda checked, s=sw_id: self.engine.switch_single_operate(s, SwitchPosition.REVERSE))
-            row = 0 if i <= 3 else 1
-            col = (i - 1) % 3 * 2
-            right_grid.addWidget(btn_dn, row, col)
-            right_grid.addWidget(btn_rev, row, col + 1)
+            btn_dn.clicked.connect(lambda checked, s=sw_id: self.simulator.move_switch(s, SwitchPosition.NORMAL))
+            btn_rev.clicked.connect(lambda checked, s=sw_id: self.simulator.move_switch(s, SwitchPosition.REVERSE))
+            
+            # 优化排布：定反位上下分布，1-5号从左到右
+            col = i - 1
+            right_grid.addWidget(btn_dn, 0, col)  # 第一行：定
+            right_grid.addWidget(btn_rev, 1, col) # 第二行：反
 
         # 初始位置定位 (会在 resizeEvent 中动态调整)
         self.left_floating_area.move(40, 40)
