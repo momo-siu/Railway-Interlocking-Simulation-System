@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtCore import Qt, QTimer, QDateTime
 from ui.station_widget import StationWidget
 from utils.state_manager import StateManager
-from utils.models import SignalColor, SwitchPosition
+from utils.models import SwitchPosition
 from utils.sound_manager import SoundManager
 from logic.interlocking_engine import InterlockingEngine
 from simulation.device_simulator import DeviceSimulator
@@ -18,6 +18,7 @@ class MainWindow(QMainWindow):
         self.sound_manager = SoundManager()
         
         self.route_start = None
+        self._guide_lock_enabled = False
         self.init_ui()
         
         # 信号连接
@@ -68,6 +69,11 @@ class MainWindow(QMainWindow):
         self.btn_human_release = QPushButton("总 人 解")
         self.btn_guide = QPushButton("引 导")
         self.btn_guide_lock = QPushButton("引导总锁")
+        self.btn_show_signal_labels = QPushButton("信号名")
+        self.btn_show_track_labels = QPushButton("区段名")
+        self.btn_show_switch_labels = QPushButton("道岔名")
+        self.btn_show_route_highlight = QPushButton("进路高亮")
+        self.btn_clear_log = QPushButton("清日志")
         
         for btn in [self.btn_cancel, self.btn_human_release, self.btn_guide, self.btn_guide_lock]:
             btn.setStyleSheet(btn_style)
@@ -76,7 +82,51 @@ class MainWindow(QMainWindow):
         left_grid.addWidget(self.btn_human_release, 0, 1)
         left_grid.addWidget(self.btn_guide, 1, 0)
         left_grid.addWidget(self.btn_guide_lock, 1, 1)
+
+        small_btn_style = """
+            QPushButton {
+                background-color: rgba(51, 51, 51, 160); color: white; border: 1px solid #555;
+                padding: 6px 10px; font-weight: bold; font-size: 14px;
+                min-width: 90px; min-height: 36px;
+                border-radius: 6px;
+            }
+            QPushButton:hover { background-color: rgba(68, 68, 68, 210); border: 1px solid #888; }
+            QPushButton:pressed { background-color: #111; }
+            QPushButton:checked { border: 2px solid #00ff00; }
+        """
+        for btn in [
+            self.btn_show_signal_labels,
+            self.btn_show_track_labels,
+            self.btn_show_switch_labels,
+            self.btn_show_route_highlight,
+            self.btn_clear_log,
+        ]:
+            btn.setStyleSheet(small_btn_style)
+
+        for btn in [
+            self.btn_show_signal_labels,
+            self.btn_show_track_labels,
+            self.btn_show_switch_labels,
+            self.btn_show_route_highlight,
+        ]:
+            btn.setCheckable(True)
+            btn.setChecked(True)
+
+        left_grid.addWidget(self.btn_show_signal_labels, 2, 0)
+        left_grid.addWidget(self.btn_show_track_labels, 2, 1)
+        left_grid.addWidget(self.btn_show_switch_labels, 3, 0)
+        left_grid.addWidget(self.btn_show_route_highlight, 3, 1)
+        left_grid.addWidget(self.btn_clear_log, 4, 0, 1, 2)
+
         self.btn_cancel.clicked.connect(self.handle_cancel)
+        self.btn_human_release.clicked.connect(self.handle_human_release)
+        self.btn_guide.clicked.connect(self.handle_guide)
+        self.btn_guide_lock.clicked.connect(self.handle_guide_lock_toggle)
+        self.btn_show_signal_labels.toggled.connect(lambda v: self.station_view.set_view_options(show_signal_labels=v))
+        self.btn_show_track_labels.toggled.connect(lambda v: self.station_view.set_view_options(show_track_labels=v))
+        self.btn_show_switch_labels.toggled.connect(lambda v: self.station_view.set_view_options(show_switch_labels=v))
+        self.btn_show_route_highlight.toggled.connect(lambda v: self.station_view.set_view_options(show_route_highlight=v))
+        self.btn_clear_log.clicked.connect(self._clear_log)
         
         # 右侧悬浮控制组
         self.right_floating_area = QFrame(self.station_view)
@@ -89,8 +139,8 @@ class MainWindow(QMainWindow):
             btn_dn.setStyleSheet(btn_style)
             btn_rev.setStyleSheet(btn_style)
             sw_id = str(i)
-            btn_dn.clicked.connect(lambda checked, s=sw_id: self.simulator.move_switch(s, SwitchPosition.NORMAL))
-            btn_rev.clicked.connect(lambda checked, s=sw_id: self.simulator.move_switch(s, SwitchPosition.REVERSE))
+            btn_dn.clicked.connect(lambda checked, s=sw_id: self.engine.switch_single_operate(s, SwitchPosition.NORMAL))
+            btn_rev.clicked.connect(lambda checked, s=sw_id: self.engine.switch_single_operate(s, SwitchPosition.REVERSE))
             row = 0 if i <= 3 else 1
             col = (i - 1) % 3 * 2
             right_grid.addWidget(btn_dn, row, col)
@@ -160,34 +210,69 @@ class MainWindow(QMainWindow):
     def update_time(self):
         self.lbl_time.setText(QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
 
+    def _clear_log(self):
+        if hasattr(self, "log_view"):
+            self.log_view.clear()
+
     def handle_device_click(self, dtype, did):
         if dtype == "SIGNAL":
             self.sound_manager.play_ding()
             if not self.route_start:
                 self.route_start = did
-                self.update_hint(f"已选择始端: {did}，请选择终端信号机")
+                route_type = "SHUNTING" if did.startswith("D") else "TRAIN"
+                routes = self.state_manager.list_routes_from_start(did, route_type=route_type)
+                ends = sorted({r.end_signal for r in routes})
+                if ends:
+                    self.update_hint(f"已选择始端: {did}，可选终端: {' / '.join(ends)}")
+                else:
+                    self.update_hint(f"已选择始端: {did}，请选择终端信号机")
             else:
                 start = self.route_start
                 end = did
-                self.route_start = None
+                if start == end:
+                    self.route_start = None
+                    self.update_hint("已取消选路")
+                    return
+
                 self.update_hint(f"正在办理进路: {start} -> {end}")
-                self.engine.try_set_route(start, end)
+                ok = self.engine.try_set_route(start, end)
+                if ok:
+                    self.route_start = None
+                else:
+                    self.update_hint("办理失败，请按日志提示重新选择终端信号机")
 
     def handle_cancel(self):
         self.sound_manager.play_ding()
         self.route_start = None
         self.update_hint("执行总取消")
-        for sid in self.state_manager.signals:
-            self.simulator.set_signal(sid, SignalColor.RED if not sid.startswith("D") else SignalColor.BLUE)
-        for tid in self.state_manager.tracks:
-            self.state_manager.update_track(tid, is_locked=False)
-        for swid in self.state_manager.switches:
-            self.state_manager.update_switch(swid, is_locked=False)
+        self.engine.cancel_route()
+
+    def handle_human_release(self):
+        self.sound_manager.play_ding()
+        self.update_hint("执行总人解")
+        self.engine.manual_unlock()
+
+    def handle_guide(self):
+        self.sound_manager.play_ding()
+        if not self.route_start:
+            self.update_hint("请先选择需要开放引导的信号机")
+            return
+        start = self.route_start
+        self.route_start = None
+        self.update_hint(f"开放引导: {start}")
+        self.engine.guide_control(start)
+
+    def handle_guide_lock_toggle(self):
+        self.sound_manager.play_ding()
+        self._guide_lock_enabled = not self._guide_lock_enabled
+        self.engine.set_guide_lock(self._guide_lock_enabled)
+        text = "引导总锁(开)" if self._guide_lock_enabled else "引导总锁"
+        self.btn_guide_lock.setText(text)
 
     def toggle_occupancy(self, tid):
         self.sound_manager.play_ding()
         is_occ = self.state_manager.tracks[tid].is_occupied
-        self.simulator.set_track_occupancy(tid, not is_occ)
+        self.engine.simulate_track_occupancy(tid, not is_occ)
         if not is_occ:
             self.sound_manager.play_alert()
 
