@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import Qt, QRectF, QPointF, pyqtSignal
 from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QFont
 from utils.state_manager import StateManager
-from utils.models import SignalColor, SwitchPosition
+from utils.models import SignalColor, SwitchPosition, RouteStage
 
 class StationWidget(QWidget):
     device_clicked = pyqtSignal(str, str)  # device_type, device_id
@@ -15,6 +15,11 @@ class StationWidget(QWidget):
         
         # 存储设备点击区域
         self.click_regions = {} # id -> (rect, type)
+
+        self.show_signal_labels = True
+        self.show_track_labels = True
+        self.show_switch_labels = True
+        self.show_route_highlight = True
         
         # 基础坐标定义 - 调大并准备居中
         self.base_x_offset = 100
@@ -41,6 +46,23 @@ class StationWidget(QWidget):
         
         self.x_s_signal = self.base_x_offset + 1300
         self.x_end = self.base_x_offset + 1500
+
+    def set_view_options(
+        self,
+        show_signal_labels=None,
+        show_track_labels=None,
+        show_switch_labels=None,
+        show_route_highlight=None,
+    ):
+        if show_signal_labels is not None:
+            self.show_signal_labels = bool(show_signal_labels)
+        if show_track_labels is not None:
+            self.show_track_labels = bool(show_track_labels)
+        if show_switch_labels is not None:
+            self.show_switch_labels = bool(show_switch_labels)
+        if show_route_highlight is not None:
+            self.show_route_highlight = bool(show_route_highlight)
+        self.update()
 
     def update_ui(self, device_id, state):
         self.update()
@@ -135,47 +157,108 @@ class StationWidget(QWidget):
         painter.setPen(get_pen("JSG"))
         painter.drawLine(self.x_s_signal, self.y_iig, self.x_end, self.y_iig)
 
+        if self.show_route_highlight:
+            segments = {
+                "JXG": [(self.x_start, self.y_iig, self.x_x_signal, self.y_iig)],
+                "IIAG": [(self.x_x_signal, self.y_iig, self.x_sw1, self.y_iig)],
+                "IIG": [(self.x_sw1, self.y_iig, self.x_sw4, self.y_iig)],
+                "3G": [(self.x_sw3_entry, self.y_3g, self.x_sw4, self.y_3g)],
+                "1G": [(self.x_sw5_entry, self.y_1g, self.x_sw2, self.y_1g)],
+                "安全线": [(self.x_sw5_entry, self.y_safety, self.x_sw5_entry - 100, self.y_safety)],
+                "IIBG": [(self.x_sw4, self.y_iig, self.x_s_signal, self.y_iig)],
+                "JSG": [(self.x_s_signal, self.y_iig, self.x_end, self.y_iig)],
+            }
+            painter.setPen(QPen(QColor(255, 0, 0), 4))
+            active = [
+                r for r in self.state_manager.routes.values()
+                if r.is_active and r.stage in (RouteStage.PRELOCKED, RouteStage.OPENED, RouteStage.APPROACH_LOCKED, RouteStage.RELEASING)
+            ]
+            for r in active:
+                for tid in r.path_tracks:
+                    for x1, y1, x2, y2 in segments.get(tid, []):
+                        painter.drawLine(x1, y1, x2, y2)
+
     def draw_switches(self, painter):
         # 斜线连接逻辑
         color_idle = QColor(0, 191, 255)
         
-        def draw_diagonal_switch(swid, start_p, end_p, is_reverse_active):
+        def get_active_pen(swid):
             sw = self.state_manager.switches[swid]
             color = color_idle
-            if sw.is_locked: color = Qt.white
-            elif sw.position == SwitchPosition.MOVING: color = Qt.yellow
-            
-            # 基础虚线背景（表示物理存在）
-            p_bg = QPen(QColor(60, 60, 60), 1, Qt.DashLine)
-            painter.setPen(p_bg)
+            if sw.is_locked:
+                color = Qt.white
+            elif sw.position == SwitchPosition.MOVING:
+                color = Qt.yellow
+            return QPen(color, 3)
+
+        def draw_bg_line(start_p, end_p):
+            painter.setPen(QPen(QColor(60, 60, 60), 1, Qt.DashLine))
             painter.drawLine(start_p, end_p)
-            
-            # 实际连通线
-            if is_reverse_active:
-                p_active = QPen(color, 3)
-                painter.setPen(p_active)
-                painter.drawLine(start_p, end_p)
+
+        def draw_active_line(swid, start_p, end_p):
+            painter.setPen(get_active_pen(swid))
+            painter.drawLine(start_p, end_p)
+
+        active_routes = [
+            r for r in self.state_manager.routes.values()
+            if r.is_active and r.stage in (RouteStage.PRELOCKED, RouteStage.OPENED, RouteStage.APPROACH_LOCKED, RouteStage.RELEASING)
+        ]
+        active_track_ids = set()
+        for r in active_routes:
+            for tid in r.path_tracks:
+                active_track_ids.add(tid)
 
         # 1# 道岔区域 (IIAG末端)
         sw1 = self.state_manager.switches["1"]
-        # 直向 (IIG)
-        draw_diagonal_switch("1", QPointF(self.x_sw1, self.y_iig), QPointF(self.x_sw1 + 40, self.y_iig), sw1.position == SwitchPosition.NORMAL)
-        # 侧向 (向上 3G)
-        draw_diagonal_switch("1", QPointF(self.x_sw1, self.y_iig), QPointF(self.x_sw3_entry, self.y_3g), sw1.position == SwitchPosition.REVERSE)
-        # 侧向 (向下 1G/安全线)
-        # 注意：这里逻辑上 1# 可能有多个反位分支，或者 5# 在 1# 的侧线上
-        painter.setPen(QPen(QColor(60, 60, 60), 1, Qt.DashLine))
-        painter.drawLine(self.x_sw1, self.y_iig, self.x_sw5_entry, self.y_1g)
+        p1_base = QPointF(self.x_sw1, self.y_iig)
+        p1_straight = QPointF(self.x_sw1 + 40, self.y_iig)
+        p1_to_3g = QPointF(self.x_sw3_entry, self.y_3g)
+        p1_to_1g = QPointF(self.x_sw5_entry, self.y_1g)
+
+        draw_bg_line(p1_base, p1_straight)
+        draw_bg_line(p1_base, p1_to_3g)
+        draw_bg_line(p1_base, p1_to_1g)
+
+        if "3G" in active_track_ids:
+            draw_active_line("1", p1_base, p1_to_3g)
+        elif "1G" in active_track_ids or "安全线" in active_track_ids:
+            draw_active_line("1", p1_base, p1_to_1g)
+        else:
+            if sw1.position == SwitchPosition.NORMAL:
+                draw_active_line("1", p1_base, p1_straight)
+            elif sw1.position == SwitchPosition.REVERSE:
+                draw_active_line("1", p1_base, p1_to_3g)
 
         # 3# 道岔 (3G入口)
         # 4# 道岔 (IIG/3G出口汇合)
-        draw_diagonal_switch("4", QPointF(self.x_sw4, self.y_3g), QPointF(self.x_sw4 + 50, self.y_iig), True) # 示意连接
+        p4_a = QPointF(self.x_sw4, self.y_3g)
+        p4_b = QPointF(self.x_sw4 + 50, self.y_iig)
+        draw_bg_line(p4_a, p4_b)
+        if self.state_manager.switches["4"].position == SwitchPosition.REVERSE or "3G" in active_track_ids:
+            draw_active_line("4", p4_a, p4_b)
         
         # 2# 道岔 (1G出口汇合)
-        draw_diagonal_switch("2", QPointF(self.x_sw2, self.y_1g), QPointF(self.x_sw2 + 50, self.y_iig), True)
+        p2_a = QPointF(self.x_sw2, self.y_1g)
+        p2_b = QPointF(self.x_sw2 + 50, self.y_iig)
+        draw_bg_line(p2_a, p2_b)
+        if self.state_manager.switches["2"].position == SwitchPosition.REVERSE or "1G" in active_track_ids:
+            draw_active_line("2", p2_a, p2_b)
 
         # 5# 道岔 (安全线/1G分岔)
-        draw_diagonal_switch("5", QPointF(self.x_sw1 + 50, self.y_iig + 25), QPointF(self.x_sw5_entry, self.y_safety), True)
+        p5_a = QPointF(self.x_sw1 + 50, self.y_iig + 25)
+        p5_b = QPointF(self.x_sw5_entry, self.y_safety)
+        draw_bg_line(p5_a, p5_b)
+        if self.state_manager.switches["5"].position == SwitchPosition.REVERSE or "安全线" in active_track_ids:
+            draw_active_line("5", p5_a, p5_b)
+
+        if self.show_switch_labels:
+            painter.setPen(QColor(0, 255, 0))
+            painter.setFont(QFont("Consolas", 10, QFont.Bold))
+            painter.drawText(QPointF(self.x_sw1 - 10, self.y_iig - 12), "1#")
+            painter.drawText(QPointF(self.x_sw2 - 10, self.y_1g - 12), "2#")
+            painter.drawText(QPointF(self.x_sw3_entry - 10, self.y_3g - 12), "3#")
+            painter.drawText(QPointF(self.x_sw4 - 10, self.y_iig - 12), "4#")
+            painter.drawText(QPointF(self.x_sw5_entry - 10, self.y_safety - 12), "5#")
 
     def draw_signals(self, painter):
         colors = {
@@ -184,6 +267,7 @@ class StationWidget(QWidget):
             SignalColor.YELLOW: Qt.yellow,
             SignalColor.BLUE: QColor(0, 0, 255),
             SignalColor.WHITE: Qt.white,
+            SignalColor.MOON_WHITE: QColor(200, 200, 255),
             SignalColor.OFF: Qt.black
         }
 
@@ -203,9 +287,19 @@ class StationWidget(QWidget):
             # 绘制灯光
             painter.setBrush(QBrush(colors.get(sig.color, Qt.black)))
             painter.drawEllipse(rect)
+
+            if self.show_signal_labels:
+                painter.setPen(QColor(220, 220, 220))
+                painter.setFont(QFont("Consolas", 10, QFont.Bold))
+                if direction == "right":
+                    label_pos = QPointF(rect.right() + 6, rect.center().y() + 4)
+                else:
+                    label_pos = QPointF(rect.left() - 6 - len(sid) * 8, rect.center().y() + 4)
+                painter.drawText(label_pos, sid)
             
             # 点击区域
-            self.click_regions[sid] = (rect, "SIGNAL")
+            hit = rect.adjusted(-10, -10, 10, 10)
+            self.click_regions[sid] = (hit, "SIGNAL")
 
         # 进站
         draw_sig_pro(self.x_x_signal, self.y_iig, "X", "right")
@@ -233,13 +327,17 @@ class StationWidget(QWidget):
         painter.setPen(QColor(0, 255, 0))
         painter.drawText(self.rect(), Qt.AlignTop | Qt.AlignHCenter, "\n\n标 准 站")
         
-        painter.setFont(QFont("Microsoft YaHei", 10))
-        painter.setPen(Qt.white)
-        # 轨道名称
-        painter.drawText(self.x_start + 20, self.y_iig + 25, "JXG")
-        painter.drawText(self.x_track_start + 100, self.y_3g - 15, "3G")
-        painter.drawText(self.x_track_start + 100, self.y_iig - 15, "IIG")
-        painter.drawText(self.x_track_start + 100, self.y_1g + 25, "1G")
+        if self.show_track_labels:
+            painter.setFont(QFont("Microsoft YaHei", 10))
+            painter.setPen(Qt.white)
+            painter.drawText(self.x_start + 20, self.y_iig + 25, "JXG")
+            painter.drawText(self.x_x_signal + 40, self.y_iig + 25, "IIAG")
+            painter.drawText(self.x_track_start + 100, self.y_3g - 15, "3G")
+            painter.drawText(self.x_track_start + 100, self.y_iig - 15, "IIG")
+            painter.drawText(self.x_track_start + 100, self.y_1g + 25, "1G")
+            painter.drawText(self.x_sw5_entry - 80, self.y_safety + 25, "安全线")
+            painter.drawText(self.x_sw4 + 80, self.y_iig + 25, "IIBG")
+            painter.drawText(self.x_s_signal + 30, self.y_iig + 25, "JSG")
         
         # 方向
         painter.setPen(Qt.yellow)

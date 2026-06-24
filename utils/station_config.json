@@ -1,0 +1,151 @@
+{
+  "station_name": "标准站",
+  "signals": [
+    { "id": "X", "name": "X", "type": "TRAIN", "default_aspect": "STOP" },
+    { "id": "S", "name": "S", "type": "TRAIN", "default_aspect": "STOP" },
+    { "id": "X3", "name": "X3", "type": "TRAIN", "default_aspect": "STOP" },
+    { "id": "XII", "name": "XII", "type": "TRAIN", "default_aspect": "STOP" },
+    { "id": "X1", "name": "X1", "type": "TRAIN", "default_aspect": "STOP" },
+    { "id": "S3", "name": "S3", "type": "TRAIN", "default_aspect": "STOP" },
+    { "id": "SII", "name": "SII", "type": "TRAIN", "default_aspect": "STOP" },
+    { "id": "S1", "name": "S1", "type": "TRAIN", "default_aspect": "STOP" },
+    { "id": "D1", "name": "D1", "type": "SHUNT", "default_aspect": "STOP" },
+    { "id": "D2", "name": "D2", "type": "SHUNT", "default_aspect": "STOP" }
+  ],
+  "switches": [
+    { "id": "1", "name": "1#", "default_position": "NORMAL" },
+    { "id": "2", "name": "2#", "default_position": "NORMAL" },
+    { "id": "3", "name": "3#", "default_position": "NORMAL" },
+    { "id": "4", "name": "4#", "default_position": "NORMAL" },
+    { "id": "5", "name": "5#", "default_position": "NORMAL" }
+  ],
+  "tracks": [
+    { "id": "JXG", "name": "JXG", "role": "APPROACH" },
+    { "id": "IIAG", "name": "IIAG", "role": "THROAT" },
+    { "id": "3G", "name": "3G", "role": "YARD" },
+    { "id": "IIG", "name": "IIG", "role": "MAIN" },
+    { "id": "1G", "name": "1G", "role": "YARD" },
+    { "id": "安全线", "name": "安全线", "role": "SAFETY" },
+    { "id": "IIBG", "name": "IIBG", "role": "THROAT" },
+    { "id": "JSG", "name": "JSG", "role": "DEPARTURE" }
+  ],
+  "routes": [
+    {
+      "id": "R_X_XII",
+      "start": "X",
+      "end": "XII",
+      "type": "TRAIN",
+      "path_tracks": ["JXG", "IIAG", "IIG"],
+      "approach_tracks": ["JXG"],
+      "departure_tracks": [],
+      "switches": { "1": "NORMAL", "4": "NORMAL" },
+      "flank_switches": {},
+      "conflicts": ["R_X_X3", "R_X_X1", "R_S_SII", "R_S_S3", "R_S_S1"],
+      "start_aspect": "PROCEED"
+    },
+    {
+      "id": "R_X_X3",
+      "start": "X",
+      "end": "X3",
+      "type": "TRAIN",
+      "path_tracks": ["JXG", "IIAG", "3G"],
+      "approach_tracks": ["JXG"],
+      "departure_tracks": [],
+      "switches": { "1": "REVERSE", "3": "NORMAL", "4": "REVERSE" },
+      "flank_switches": {},
+      "conflicts": ["R_X_XII", "R_X_X1", "R_S_SII", "R_S_S3", "R_S_S1"],
+      "start_aspect": "DOUBLE_CAUTION"
+    },
+    {
+      "id": "R_X_X1",
+      "start": "X",
+      "end": "X1",
+      "type": "TRAIN",
+      "path_tracks": ["JXG", "IIAG", "1G"],
+      "approach_tracks": ["JXG"],
+      "departure_tracks": [],
+      "switches": { "1": "REVERSE", "5": "NORMAL" },
+      "flank_switches": { "2": "NORMAL" },
+      "conflicts": ["R_X_XII", "R_X_X3", "R_S_SII", "R_S_S3", "R_S_S1"],
+      "start_aspect": "DOUBLE_CAUTION"
+    },
+    {
+      "id": "R_XII_JSG",
+      "start": "XII",
+      "end": "JSG",
+      "type": "TRAIN",
+      "path_tracks": ["IIBG", "JSG"],
+      "approach_tracks": [],
+      "departure_tracks": ["JSG"],
+      "switches": { "4": "NORMAL" },
+      "flank_switches": {},
+      "conflicts": ["R_S_SII", "R_S_S3", "R_S_S1"],
+      "start_aspect": "PROCEED"
+    },
+    {
+      "id": "R_X3_JSG",
+      "start": "X3",
+      "end": "JSG",
+      "type": "TRAIN",
+      "path_tracks": ["IIBG", "JSG"],
+      "approach_tracks": [],
+      "departure_tracks": ["JSG"],
+      "switches": { "4": "REVERSE" },
+      "flank_switches": {},
+      "conflicts": ["R_S_SII", "R_S_S3", "R_S_S1"],
+      "start_aspect": "PROCEED"
+    },
+    {
+      "id": "R_S_SII",
+      "start": "S",
+      "end": "SII",
+      "type": "TRAIN",
+      "path_tracks": ["JSG", "IIBG", "IIG"],
+      "approach_tracks": ["JSG"],
+      "departure_tracks": [],
+      "switches": { "4": "NORMAL", "1": "NORMAL" },
+      "flank_switches": {},
+      "conflicts": ["R_X_XII", "R_X_X3", "R_X_X1"],
+      "start_aspect": "PROCEED"
+    },
+    {
+      "id": "R_S_S3",
+      "start": "S",
+      "end": "S3",
+      "type": "TRAIN",
+      "path_tracks": ["JSG", "IIBG", "3G"],
+      "approach_tracks": ["JSG"],
+      "departure_tracks": [],
+      "switches": { "4": "REVERSE", "3": "NORMAL" },
+      "flank_switches": {},
+      "conflicts": ["R_X_XII", "R_X_X3", "R_X_X1"],
+      "start_aspect": "DOUBLE_CAUTION"
+    },
+    {
+      "id": "R_S_S1",
+      "start": "S",
+      "end": "S1",
+      "type": "TRAIN",
+      "path_tracks": ["JSG", "IIBG", "1G"],
+      "approach_tracks": ["JSG"],
+      "departure_tracks": [],
+      "switches": { "2": "REVERSE", "5": "NORMAL" },
+      "flank_switches": {},
+      "conflicts": ["R_X_XII", "R_X_X3", "R_X_X1"],
+      "start_aspect": "DOUBLE_CAUTION"
+    },
+    {
+      "id": "R_D1_IIG",
+      "start": "D1",
+      "end": "IIG",
+      "type": "SHUNTING",
+      "path_tracks": ["IIG"],
+      "approach_tracks": [],
+      "departure_tracks": [],
+      "switches": { "1": "NORMAL" },
+      "flank_switches": {},
+      "conflicts": [],
+      "start_aspect": "SHUNT_PROCEED"
+    }
+  ]
+}
