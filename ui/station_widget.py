@@ -340,6 +340,7 @@ class StationWidget(QWidget):
             painter.drawText(self.x_s_signal + 30, self.y_iig + 25, "JSG")
         
         # 方向
+        painter.setFont(QFont("Microsoft YaHei", 10, QFont.Bold))
         painter.setPen(Qt.yellow)
         painter.drawText(self.x_start, self.y_iig - 40, "← 下行方向")
         painter.drawText(self.x_end - 100, self.y_iig + 60, "上行方向 →")
