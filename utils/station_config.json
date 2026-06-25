@@ -51,7 +51,7 @@
       "path_tracks": ["JXG", "IIAG", "3G"],
       "approach_tracks": ["JXG"],
       "departure_tracks": [],
-      "switches": { "1": "REVERSE", "3": "NORMAL", "4": "REVERSE" },
+      "switches": { "1": "NORMAL", "3": "REVERSE", "4": "REVERSE" },
       "flank_switches": {},
       "conflicts": ["R_X_XII", "R_X_X1", "R_S_SII", "R_S_S3", "R_S_S1"],
       "start_aspect": "DOUBLE_CAUTION"
@@ -64,8 +64,8 @@
       "path_tracks": ["JXG", "IIAG", "1G"],
       "approach_tracks": ["JXG"],
       "departure_tracks": [],
-      "switches": { "1": "REVERSE", "5": "NORMAL" },
-      "flank_switches": { "2": "NORMAL" },
+      "switches": { "1": "REVERSE", "5": "NORMAL", "2": "REVERSE" },
+      "flank_switches": {},
       "conflicts": ["R_X_XII", "R_X_X3", "R_S_SII", "R_S_S3", "R_S_S1"],
       "start_aspect": "DOUBLE_CAUTION"
     },
@@ -116,7 +116,7 @@
       "path_tracks": ["JSG", "IIBG", "3G"],
       "approach_tracks": ["JSG"],
       "departure_tracks": [],
-      "switches": { "4": "REVERSE", "3": "NORMAL" },
+      "switches": { "4": "REVERSE", "3": "REVERSE" },
       "flank_switches": {},
       "conflicts": ["R_X_XII", "R_X_X3", "R_X_X1"],
       "start_aspect": "DOUBLE_CAUTION"

@@ -241,6 +241,11 @@ class MainWindow(QMainWindow):
                     self.route_start = None
                 else:
                     self.update_hint("办理失败，请按日志提示重新选择终端信号机")
+        elif dtype == "BUTTON":
+            self.sound_manager.play_ding()
+            if did == "PZA":
+                self.state_manager.log("[INFO] PZA按钮：人工操作触发")
+                self.update_hint("PZA按钮已触发")
 
     def handle_cancel(self):
         self.sound_manager.play_ding()
