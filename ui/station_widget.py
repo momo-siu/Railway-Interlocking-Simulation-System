@@ -349,11 +349,11 @@ class StationWidget(QWidget):
         if self.show_switch_labels:
             painter.setPen(QColor(0, 255, 0))
             painter.setFont(QFont("Consolas", 10, QFont.Bold))
-            painter.drawText(QPointF(self.x_sw1 - 10, self.y_iig - 12), "1#")
-            painter.drawText(QPointF(self.x_sw3_entry + 10, self.y_iig - 12), "3#")
-            painter.drawText(QPointF(self.x_1g_left + 10, self.y_1g - 12), "5#")
-            painter.drawText(QPointF(self.x_sw4 - 10, self.y_iig - 12), "4#")
-            painter.drawText(QPointF(self.x_sw2 - 10, self.y_iig - 12), "2#")
+            painter.drawText(QPointF(self.x_sw1 - 25, self.y_iig - 15), "1#")
+            painter.drawText(QPointF(self.x_sw3_entry + 10, self.y_iig - 15), "3#")
+            painter.drawText(QPointF(self.x_1g_left + 10, self.y_1g - 15), "5#")
+            painter.drawText(QPointF(self.x_sw4 - 25, self.y_iig - 15), "4#")
+            painter.drawText(QPointF(self.x_sw2 - 25, self.y_iig - 15), "2#")
 
     def draw_signals(self, painter):
         colors = {
@@ -402,12 +402,14 @@ class StationWidget(QWidget):
             painter.setPen(QPen(Qt.white, 2))
             if direction == "right":
                 painter.drawLine(x, y, x, y - 20)
+                # 改为横向并列排列
                 rect1 = QRectF(x, y - 25, radius*2, radius*2)
-                rect2 = QRectF(x, y - 25 - radius*2 - 2, radius*2, radius*2)
+                rect2 = QRectF(x + radius*2 + 2, y - 25, radius*2, radius*2)
             else:
                 painter.drawLine(x, y, x, y + 20)
+                # 改为横向并列排列
                 rect1 = QRectF(x - radius*2, y + 5, radius*2, radius*2)
-                rect2 = QRectF(x - radius*2, y + 5 + radius*2 + 2, radius*2, radius*2)
+                rect2 = QRectF(x - radius*4 - 2, y + 5, radius*2, radius*2)
             
             c1, c2 = get_lamp_colors(sig)
             painter.setBrush(QBrush(c1))
@@ -419,13 +421,19 @@ class StationWidget(QWidget):
                 painter.setPen(QColor(220, 220, 220))
                 painter.setFont(QFont("Consolas", 10, QFont.Bold))
                 if direction == "right":
-                    label_pos = QPointF(rect1.right() + 6, rect1.center().y() + 4)
+                    # 标签位置微调，避免重叠
+                    label_pos = QPointF(rect2.right() + 8, rect1.center().y() + 4)
                 else:
-                    label_pos = QPointF(rect1.left() - 6 - len(sid) * 8, rect1.center().y() + 4)
+                    if sid == "D2":
+                        # 特殊调整 D2：向下移动 25 (从-10到+15)，向左移动 10 (边距从-8到-18)
+                        label_pos = QPointF(rect2.left() - 18 - len(sid) * 8, rect1.center().y() + 15)
+                    else:
+                        # 标签位置微调：对于左向信号机（S3, SII, S1等），将标签垂直向上移动，避免与灯位重叠
+                        label_pos = QPointF(rect2.left() - 8 - len(sid) * 8, rect1.center().y() - 27)
                 painter.drawText(label_pos, sid)
             
-            # 点击区域
-            hit = rect1.united(rect2).adjusted(-10, -10, 10, 10)
+            # 点击区域涵盖两个灯位
+            hit = rect1.united(rect2).adjusted(-6, -6, 6, 6)
             self.click_regions[sid] = (hit, "SIGNAL")
 
         # 进站
@@ -462,27 +470,30 @@ class StationWidget(QWidget):
         if self.show_track_labels:
             painter.setFont(QFont("Microsoft YaHei", 10))
             painter.setPen(Qt.white)
-            painter.drawText(self.x_start + 20, self.y_iig + 25, "JXG")
-            painter.drawText(self.x_x_signal + 40, self.y_iig + 25, "IIAG")
-            painter.drawText(self.x_3g_left + 40, self.y_3g - 15, "3G")
-            painter.drawText(self.x_track_start + 100, self.y_iig - 15, "IIG")
-            painter.drawText(self.x_1g_left + 80, self.y_1g + 25, "1G")
-            painter.drawText(self.x_safety_left - 50, self.y_safety + 45, "安全线")
-            painter.drawText((self.x_sw4 + self.x_s_signal) // 2 - 20, self.y_iig - 25, "IIBG")
-            painter.drawText(self.x_s_signal + 30, self.y_iig + 25, "JSG")
+            # 调整标注位置，避免与线路重叠
+            painter.drawText(self.x_start + 20, self.y_iig + 35, "JXG")
+            painter.drawText(self.x_x_signal + 40, self.y_iig + 35, "IIAG")
+            painter.drawText(self.x_3g_left + 80, self.y_3g - 25, "3G")
+            painter.drawText(self.x_track_start + 100, self.y_iig - 25, "IIG")
+            painter.drawText(self.x_1g_left + 120, self.y_1g + 35, "1G")
+            painter.drawText(self.x_safety_left - 80, self.y_safety + 35, "安全线")
+            painter.drawText((self.x_sw4 + self.x_s_signal) // 2 - 20, self.y_iig - 35, "IIBG")
+            painter.drawText(self.x_s_signal + 30, self.y_iig + 35, "JSG")
         
-        # 方向
+        # 方向 - 微调避免重叠
         painter.setFont(QFont("Microsoft YaHei", 10, QFont.Bold))
         painter.setPen(Qt.yellow)
-        painter.drawText(self.x_start, self.y_iig - 40, "← 下行方向")
-        painter.drawText(self.x_end - 100, self.y_iig + 60, "上行方向 →")
+        painter.drawText(self.x_start, self.y_iig - 60, "← 下行方向")
+        painter.drawText(self.x_end - 120, self.y_iig + 60, "上行方向 →")
 
+        # 坡度标注
         painter.setPen(QColor(180, 180, 180))
         painter.setFont(QFont("Consolas", 12, QFont.Bold))
-        painter.drawText(QPointF(self.x_end - 90, self.y_3g - 60), "6‰")
+        painter.drawText(QPointF(self.x_end - 150, self.y_3g - 40), "6‰")
 
     def draw_pza_button(self, painter):
-        rect = QRectF(self.x_safety_left - 60, self.y_safety + 50, 60, 28)
+        # 调整 PZA 按钮位置，避免与安全线标签重叠
+        rect = QRectF(self.x_safety_left - 120, self.y_safety + 60, 60, 28)
         painter.setPen(QPen(QColor(120, 120, 120), 1))
         painter.setBrush(QBrush(QColor(30, 30, 30)))
         painter.drawRoundedRect(rect, 4, 4)
