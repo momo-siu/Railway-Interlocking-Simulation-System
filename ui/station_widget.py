@@ -213,15 +213,15 @@ class StationWidget(QWidget):
         switch_segments = {
             "1": {
                 SwitchPosition.NORMAL: [(self.x_sw1, self.y_iig, self.x_sw1 + 70, self.y_iig)],
-                SwitchPosition.REVERSE: [(self.x_sw1, self.y_iig, self.x_1g_left, self.y_1g)],
+                SwitchPosition.REVERSE: [(self.x_sw1, self.y_iig, self.x_3g_left, self.y_3g)],
             },
             "3": {
                 SwitchPosition.NORMAL: [(self.x_sw3_entry, self.y_iig, self.x_sw3_entry + 60, self.y_iig)],
-                SwitchPosition.REVERSE: [(self.x_sw3_entry, self.y_iig, self.x_3g_left, self.y_3g)],
+                SwitchPosition.REVERSE: [(self.x_sw3_entry, self.y_iig, self.x_1g_left, self.y_1g)],
             },
             "5": {
                 SwitchPosition.NORMAL: [(self.x_1g_left, self.y_1g, self.x_1g_left + 60, self.y_1g)],
-                SwitchPosition.REVERSE: [(self.x_1g_left, self.y_1g, self.x_safety_left - 80, self.y_safety)],
+                SwitchPosition.REVERSE: [(self.x_1g_left, self.y_1g, self.x_sw3_entry, self.y_iig)],
             },
             "4": {
                 SwitchPosition.NORMAL: [(self.x_sw4, self.y_iig, self.x_sw4 + 60, self.y_iig)],
@@ -245,9 +245,6 @@ class StationWidget(QWidget):
                 else:
                     for x1, y1, x2, y2 in base_track_segments.get(tid, []):
                         painter.drawLine(x1, y1, x2, y2)
-
-            if "1G" in r.path_tracks:
-                painter.drawLine(self.x_sw1, self.y_iig, self.x_1g_left, self.y_1g)
 
             for sid, required_pos in r.path_switches.items():
                 for x1, y1, x2, y2 in switch_segments.get(str(sid), {}).get(required_pos, []):
@@ -294,19 +291,19 @@ class StationWidget(QWidget):
 
         p1_base = QPointF(self.x_sw1, self.y_iig)
         p1_straight = QPointF(self.x_sw1 + 70, self.y_iig)
-        p5_base = QPointF(self.x_1g_left, self.y_1g)
+        p1_div = QPointF(self.x_3g_left, self.y_3g)
 
         draw_bg_line(p1_base, p1_straight)
-        draw_bg_line(p1_base, p5_base)
+        draw_bg_line(p1_base, p1_div)
 
         if sw1.position == SwitchPosition.REVERSE:
-            draw_active_line("1", p1_base, p5_base)
+            draw_active_line("1", p1_base, p1_div)
         else:
             draw_active_line("1", p1_base, p1_straight)
 
         p3_base = QPointF(self.x_sw3_entry, self.y_iig)
         p3_straight = QPointF(self.x_sw3_entry + 60, self.y_iig)
-        p3_div = QPointF(self.x_3g_left, self.y_3g)
+        p3_div = QPointF(self.x_1g_left, self.y_1g)
         draw_bg_line(p3_base, p3_straight)
         draw_bg_line(p3_base, p3_div)
         if sw3.position == SwitchPosition.REVERSE:
@@ -314,12 +311,13 @@ class StationWidget(QWidget):
         else:
             draw_active_line("3", p3_base, p3_straight)
 
+        p5_base = QPointF(self.x_1g_left, self.y_1g)
         p5_to_1g = QPointF(p5_base.x() + 60, self.y_1g)
-        p5_to_safety = QPointF(self.x_safety_left - 80, self.y_safety)
+        p5_to_iig = p3_base
         draw_bg_line(p5_base, p5_to_1g)
-        draw_bg_line(p5_base, p5_to_safety)
+        draw_bg_line(p5_base, p5_to_iig)
         if sw5.position == SwitchPosition.REVERSE:
-            draw_active_line("5", p5_base, p5_to_safety)
+            draw_active_line("5", p5_base, p5_to_iig)
         else:
             draw_active_line("5", p5_base, p5_to_1g)
 
@@ -487,9 +485,15 @@ class StationWidget(QWidget):
         painter.drawText(self.x_end - 120, self.y_iig + 60, "上行方向 →")
 
         # 坡度标注
-        painter.setPen(QColor(180, 180, 180))
+        painter.setPen(QPen(QColor(180, 180, 180), 2))
         painter.setFont(QFont("Consolas", 12, QFont.Bold))
-        painter.drawText(QPointF(self.x_end - 150, self.y_3g - 40), "6‰")
+        slope_x = self.x_end - 180
+        slope_y = self.y_3g - 40
+        # 绘制坡度符号 (水平线 + 左侧下斜尾巴)
+        painter.drawLine(int(slope_x), int(slope_y), int(slope_x + 60), int(slope_y))
+        painter.drawLine(int(slope_x), int(slope_y), int(slope_x - 15), int(slope_y + 15))
+        # 绘制 6‰ 文字
+        painter.drawText(QRectF(slope_x, slope_y - 25, 60, 20), Qt.AlignCenter, "6‰")
 
     def draw_pza_button(self, painter):
         # 调整 PZA 按钮位置，避免与安全线标签重叠
