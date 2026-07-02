@@ -16,6 +16,7 @@ class MainWindow(QMainWindow):
         self.simulator = DeviceSimulator()
         self.engine = InterlockingEngine(self.simulator)
         self.sound_manager = SoundManager()
+        self._last_sound_ms = {}
         
         self.route_start = None
         self._guide_lock_enabled = False
@@ -283,11 +284,42 @@ class MainWindow(QMainWindow):
             self.sound_manager.play_alert()
 
     def add_log(self, level, message):
+        now_ms = QDateTime.currentMSecsSinceEpoch()
+
+        def play_throttled(key: str, play_fn):
+            last = self._last_sound_ms.get(key, 0)
+            if now_ms - last < 800:
+                return
+            self._last_sound_ms[key] = now_ms
+            play_fn()
+
         color = "#00FF00" if level == "SUCCESS" else "white"
         if level == "ERROR": color = "red"
         self.log_view.append(f"<span style='color:{color}'>[{level}] {message}</span>")
+
+        if "总人解：启动倒计时 180" in message:
+            play_throttled("manual_unlock_3min", self.sound_manager.play_manual_unlock_3min)
+            return
+
+        if message.startswith("进路征用："):
+            try:
+                after = message.split("：", 1)[1].strip()
+                parts = after.split()
+                if len(parts) >= 2 and parts[1] in ("X", "S"):
+                    play_throttled("prepare_receive", self.sound_manager.play_prepare_receive)
+                    return
+            except Exception:
+                pass
+
+        if "断丝" in message:
+            play_throttled("filament_fault", self.sound_manager.play_filament_fault)
+            return
+
         if level == "ERROR":
-            self.sound_manager.play_alert()
+            if "未定义进路" in message or "进路选不出" in message:
+                play_throttled("route_not_found", self.sound_manager.play_route_not_found)
+            else:
+                play_throttled("op_invalid", self.sound_manager.play_op_invalid)
 
     def update_hint(self, text):
         self.lbl_hint.setText(f"提示: {text}")

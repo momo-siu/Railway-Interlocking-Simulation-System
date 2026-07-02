@@ -48,4 +48,22 @@ class SoundManager:
         self.play("DING")
 
     def play_switch_move(self):
+        self.play("BELL")
+
+    def play_prepare_receive(self):
+        self.play("Zbjc")
+
+    def play_route_not_found(self):
+        self.play("Jlxbc")
+
+    def play_op_error(self):
+        self.play("Czcw")
+
+    def play_op_invalid(self):
+        self.play("Czwx")
+
+    def play_manual_unlock_3min(self):
+        self.play("3fys")
+
+    def play_filament_fault(self):
         self.play("DSDS")
