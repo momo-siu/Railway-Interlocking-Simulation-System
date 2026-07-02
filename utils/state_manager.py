@@ -12,6 +12,13 @@ from utils.models import (
 from typing import Dict, Optional
 import json
 import os
+import sys
+
+def get_resource_path(relative_path):
+    """获取资源的绝对路径，兼容开发环境和 PyInstaller 打包环境"""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), relative_path)
 
 class StateManager(QObject):
     # 定义信号，用于 UI 更新
@@ -38,7 +45,7 @@ class StateManager(QObject):
         self.init_station_data()
 
     def init_station_data(self):
-        config_path = os.path.join(os.path.dirname(__file__), "station_config.json")
+        config_path = get_resource_path(os.path.join("utils", "station_config.json"))
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
 

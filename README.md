@@ -20,10 +20,7 @@ python main.py
 pip install pyinstaller
 
 # 执行打包命令
-# --onefile: 封装为单个exe
-# --windowed: 运行时不显示控制台
-# --add-data: 包含音频资源文件 (Windows下使用分号 ;)
-pyinstaller --noconfirm --onefile --windowed --add-data "assets;assets" --name "RailwayInterlocking" main.py
+pyinstaller RailwayInterlocking.spec
 ```
 即可在 dist/ 文件夹下获得 RailwayInterlocking.exe 。
 
